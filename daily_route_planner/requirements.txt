@@ -1,0 +1,41 @@
+"""
+Daily Route Planner - Requirements File
+
+This file lists all Python dependencies required to run the application.
+Install using: pip install -r requirements.txt
+
+Author: Chioma Okoye
+Year: 2026
+"""
+
+# Core Web Framework
+# Flask 2.3.0 provides the web server and API endpoints
+Flask==2.3.0
+
+# WebSocket support for real-time GPS tracking
+# Enables bidirectional communication between client and server
+flask-sock==0.6.0
+
+# Numerical computing for AI/ML predictions
+# Used for linear regression with Normal Equation
+numpy>=1.21.0
+
+# PDF generation for export functionality
+# Creates professional reports with tables and formatting
+reportlab>=3.6.0
+
+# Excel file generation
+# Creates .xlsx files with multiple sheets and styling
+openpyxl>=3.0.9
+
+# QR code generation
+# Creates scannable QR codes for route sharing
+qrcode[pil]>=7.3.0
+
+# Development/Testing (optional)
+# pytest>=7.0.0
+# flask-testing>=0.8.0
+
+# Production deployment (optional)
+# gunicorn>=20.1.0
+# waitress>=2.1.0

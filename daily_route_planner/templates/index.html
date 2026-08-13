@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--
+    Daily Route Planner - Main Application Template
+    
+    A comprehensive route planning web application with:
+    - Route optimization using Nearest Neighbor algorithm
+    - Points of Interest discovery
+    - Multi-user system (Individual, Business, Driver)
+    - Real-time GPS tracking via WebSocket
+    - AI predictions using linear regression
+    - Export capabilities (PDF, Excel, CSV, QR)
+    - PWA support for mobile installation
+    
+    Author: Chioma Okoye
+    Year: 2026
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Daily Route Planner - Optimize your routes with AI predictions">
+    <meta name="theme-color" content="#4A90D9">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    
+    <!-- Leaflet CSS for interactive maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+    <title>Daily Route Planner | Chioma Okoye 2026</title>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <h1>🗺️ Daily Route Planner</h1>
+        </div>
+        <div class="nav-links">
+            <a href="#" onclick="showSection('home')">Home</a>
+            <a href="#" onclick="showSection('planner')">Route Planner</a>
+            <a href="#" onclick="showSection('tracking')" id="tracking-link" style="display:none;">Live Tracking</a>
+            <a href="#" onclick="showSection('reports')" id="reports-link" style="display:none;">Reports</a>
+            <a href="#" onclick="showSection('profile')">Profile</a>
+        </div>
+        <div class="nav-auth" id="nav-auth">
+            <button onclick="showLoginModal()" class="btn-primary">Login</button>
+            <button onclick="showRegisterModal()" class="btn-secondary">Register</button>
+        </div>
+        <div class="nav-user" id="nav-user" style="display:none;">
+            <span id="user-display"></span>
+            <button onclick="logout()" class="btn-secondary">Logout</button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="container">
+        <!-- Home Section -->
+        <section id="home-section" class="section active">
+            <div class="hero">
+                <h2>Optimize Your Daily Routes with AI</h2>
+                <p>Save time and fuel with intelligent route planning</p>
+                <div class="hero-features">
+                    <div class="feature-card">
+                        <h3>🎯 Route Optimization</h3>
+                        <p>Nearest Neighbor algorithm finds the shortest path through multiple stops</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🤖 AI Predictions</h3>
+                        <p>Linear regression predicts travel times and suggests best departure times</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📍 Points of Interest</h3>
+                        <p>Find hotels, fuel stations, restaurants, and more along your route</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📊 Business Reports</h3>
+                        <p>Track driver performance and generate detailed analytics</p>
+                    </div>
+                </div>
+                <button onclick="showSection('planner')" class="btn-large">Start Planning</button>
+            </div>
+        </section>
+
+        <!-- Route Planner Section -->
+        <section id="planner-section" class="section">
+            <h2>Route Planner</h2>
+            
+            <div class="planner-grid">
+                <!-- Input Panel -->
+                <div class="input-panel">
+                    <h3>Add Stops</h3>
+                    <div class="location-input-group">
+                        <input type="text" id="stop-name" placeholder="Stop name (e.g., Office)">
+                        <input type="number" id="stop-lat" placeholder="Latitude" step="any">
+                        <input type="number" id="stop-lon" placeholder="Longitude" step="any">
+                        <button onclick="addStop()" class="btn-primary">Add Stop</button>
+                    </div>
+                    
+                    <div class="quick-locations">
+                        <h4>Quick Add (Ireland - Dublin Areas)</h4>
+                        <button onclick="addQuickLocation(53.3498, -6.2603, 'Dublin City Centre')" class="btn-small">Dublin City Centre</button>
+                        <button onclick="addQuickLocation(53.3441, -6.2675, 'Temple Bar')" class="btn-small">Temple Bar</button>
+                        <button onclick="addQuickLocation(53.3515, -6.2551, 'O\'Connell Street')" class="btn-small">O\'Connell Street</button>
+                        <button onclick="addQuickLocation(53.3398, -6.2498, 'Grand Canal Dock')" class="btn-small">Grand Canal Dock</button>
+                        <button onclick="addQuickLocation(53.3356, -6.2581, 'St Stephen\'s Green')" class="btn-small">St Stephen\'s Green</button>
+                        <button onclick="addQuickLocation(53.3478, -6.2758, 'Phoenix Park')" class="btn-small">Phoenix Park</button>
+                        <button onclick="addQuickLocation(53.3595, -6.2603, 'Croke Park')" class="btn-small">Croke Park</button>
+                        <button onclick="addQuickLocation(53.3429, -6.2349, 'Ballsbridge')" class="btn-small">Ballsbridge</button>
+                        <button onclick="addQuickLocation(53.3331, -6.2394, 'RDS Arena')" class="btn-small">RDS Arena</button>
+                        <button onclick="addQuickLocation(53.3518, -6.2770, 'Smithfield')" class="btn-small">Smithfield</button>
+                        <button onclick="addQuickLocation(53.3467, -6.2527, 'Busaras')" class="btn-small">Busaras</button>
+                    </div>
+                    
+                    <!-- Additional Quick Locations for other Irish cities -->
+                    <div class="quick-locations">
+                        <h4>Other Irish Cities</h4>
+                        <button onclick="addQuickLocation(51.8985, -8.4756, 'Cork City')" class="btn-small">Cork</button>
+                        <button onclick="addQuickLocation(53.2707, -9.0568, 'Galway City')" class="btn-small">Galway</button>
+                        <button onclick="addQuickLocation(52.6647, -8.6230, 'Limerick City')" class="btn-small">Limerick</button>
+                        <button onclick="addQuickLocation(52.4580, -7.0976, 'Waterford City')" class="btn-small">Waterford</button>
+                    </div>
+                    
+                    <div class="stops-list">
+                        <h4>Current Stops (<span id="stop-count">0</span>)</h4>
+                        <ul id="stops-ul"></ul>
+                        <button onclick="clearStops()" class="btn-danger">Clear All</button>
+                    </div>
+                    
+                    <button onclick="optimizeRoute()" class="btn-large btn-success">
+                        🚀 Optimize Route
+                    </button>
+                </div>
+                
+                <!-- Map Panel -->
+                <div class="map-panel">
+                    <div id="map"></div>
+                </div>
+            </div>
+            
+            <!-- Results Panel (hidden until optimization) -->
+            <div id="results-panel" class="results-panel" style="display:none;">
+                <h3>Optimization Results</h3>
+                
+                <!-- Before/After Comparison -->
+                <div class="comparison-box">
+                    <h4>📊 Route Comparison</h4>
+                    <div class="comparison-grid">
+                        <div class="comparison-item before">
+                            <span class="label">❌ Original Route (Input Order)</span>
+                            <span class="value" id="original-distance">-</span>
+                        </div>
+                        <div class="comparison-item after">
+                            <span class="label">✅ Optimized Route (Nearest Neighbor)</span>
+                            <span class="value" id="optimized-distance">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card highlight">
+                        <h4>Total Distance</h4>
+                        <p id="total-distance">-</p>
+                    </div>
+                    <div class="stat-card highlight">
+                        <h4>Estimated Duration</h4>
+                        <p id="total-duration">-</p>
+                    </div>
+                    <div class="stat-card success">
+                        <h4>Distance Saved</h4>
+                        <p id="distance-saved">-</p>
+                    </div>
+                    <div class="stat-card success">
+                        <h4>Improvement</h4>
+                        <p id="improvement">-</p>
+                    </div>
+                </div>
+                
+                <!-- Detailed Route Segments Table -->
+                <div class="segments-section">
+                    <h4>🛣️ Detailed Route Segments</h4>
+                    <div class="table-container">
+                        <table id="segments-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Distance (km)</th>
+                                    <th>Est. Time (min)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="segments-tbody"></tbody>
+                            <tfoot>
+                                <tr class="total-row">
+                                    <td colspan="2"><strong>TOTAL</strong></td>
+                                    <td id="total-segments-distance">-</td>
+                                    <td id="total-segments-time">-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- AI Predictions -->
+                <div class="predictions-section">
+                    <h3>🤖 AI Travel Predictions</h3>
+                    <div class="prediction-cards">
+                        <div class="prediction-card">
+                            <h4>Predicted Duration</h4>
+                            <p id="ai-duration">-</p>
+                            <small>Based on linear regression analysis</small>
+                        </div>
+                        <div class="prediction-card">
+                            <h4>Best Departure Times</h4>
+                            <ul id="best-times"></ul>
+                            <small>Top 3 optimal times to leave</small>
+                        </div>
+                        <div class="prediction-card">
+                            <h4>Fuel Consumption</h4>
+                            <p>Car: <span id="fuel-car">-</span> L</p>
+                            <p>Van: <span id="fuel-van">-</span> L</p>
+                            <p>Truck: <span id="fuel-truck">-</span> L</p>
+                            <small>Estimated based on vehicle type</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- POI Section -->
+                <div class="poi-section">
+                    <h3>📍 Nearby Points of Interest</h3>
+                    <div class="poi-filters">
+                        <button onclick="loadPOIs('all')" class="btn-small">All</button>
+                        <button onclick="loadPOIs('hotel')" class="btn-small">Hotels</button>
+                        <button onclick="loadPOIs('fuel')" class="btn-small">Fuel</button>
+                        <button onclick="loadPOIs('restaurant')" class="btn-small">Restaurants</button>
+                        <button onclick="loadPOIs('hospital')" class="btn-small">Hospitals</button>
+                        <button onclick="loadPOIs('parking')" class="btn-small">Parking</button>
+                    </div>
+                    <div id="poi-list" class="poi-list"></div>
+                </div>
+                
+                <!-- Export Buttons -->
+                <div class="export-section">
+                    <h3>Export Report</h3>
+                    <button onclick="exportPDF()" class="btn-primary">📄 PDF</button>
+                    <button onclick="exportExcel()" class="btn-success">📊 Excel</button>
+                    <button onclick="exportCSV()" class="btn-secondary">📝 CSV</button>
+                    <button onclick="exportQR()" class="btn-info">📱 QR Code</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Tracking Section -->
+        <section id="tracking-section" class="section">
+            <h2>Live Driver Tracking</h2>
+            <div class="tracking-grid">
+                <div class="tracking-map">
+                    <div id="tracking-map" style="height: 500px;"></div>
+                </div>
+                <div class="driver-list">
+                    <h3>Active Drivers</h3>
+                    <div id="drivers-ul"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports-section" class="section">
+            <h2>Driver Performance Reports</h2>
+            <div id="drivers-table-container">
+                <table id="drivers-table">
+                    <thead>
+                        <tr>
+                            <th>Driver</th>
+                            <th>Vehicle</th>
+                            <th>Total Trips</th>
+                            <th>Distance</th>
+                            <th>Rating</th>
+                            <th>On-Time %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drivers-tbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Profile Section -->
+        <section id="profile-section" class="section">
+            <h2>My Profile</h2>
+            <div class="profile-card">
+                <p><strong>Username:</strong> <span id="profile-username"></span></p>
+                <p><strong>User Type:</strong> <span id="profile-type"></span></p>
+                <p><strong>Email:</strong> <span id="profile-email"></span></p>
+            </div>
+            
+            <div class="saved-locations">
+                <h3>Saved Locations</h3>
+                <div id="saved-locations-list"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('login-modal')">&times;</span>
+            <h2>Login</h2>
+            <form onsubmit="handleLogin(event)">
+                <input type="text" id="login-username" placeholder="Username" required>
+                <input type="password" id="login-password" placeholder="Password" required>
+                <button type="submit" class="btn-primary">Login</button>
+            </form>
+            <p class="demo-accounts">
+                <strong>Demo Accounts:</strong><br>
+                business_owner / pass123<br>
+                driver_sarah / pass123<br>
+                traveler_john / pass123
+            </p>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('register-modal')">&times;</span>
+            <h2>Register</h2>
+            <form onsubmit="handleRegister(event)">
+                <input type="text" id="reg-username" placeholder="Username" required>
+                <input type="email" id="reg-email" placeholder="Email" required>
+                <input type="password" id="reg-password" placeholder="Password" required>
+                <select id="reg-type" required>
+                    <option value="">Select User Type</option>
+                    <option value="individual">Individual Traveler</option>
+                    <option value="business">Business Owner</option>
+                    <option value="driver">Driver</option>
+                </select>
+                <input type="text" id="reg-business" placeholder="Business Name (optional)">
+                <input type="text" id="reg-vehicle" placeholder="Vehicle Type (optional)">
+                <button type="submit" class="btn-primary">Register</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Daily Route Planner. Author: Chioma Okoye</p>
+        <p>Built with Flask, Leaflet.js, and AI-powered route optimization</p>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Main Application JS -->
+    <script src="/static/js/app.js"></script>
+    
+    <!-- Service Worker Registration for PWA -->
+    <script>
+        // Register service worker for offline support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.error('SW registration failed:', err));
+        }
+    </script>
+</body>
+</html>
