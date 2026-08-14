@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Share Location{% endblock %}
+{% block content %}
+<h1 class="page-title">📍 Share Your Location</h1>
+<div class="card">
+    <div id="locationStatus" class="mb-2">
+        <p>Status: <span id="statusText">Not sharing</span></p>
+    </div>
+    <button id="toggleBtn" onclick="toggleSharing()" class="btn btn-primary">Start Sharing</button>
+    
+    <div id="sharingLink" style="display:none; margin-top: 1rem;">
+        <p><strong>Your sharing link:</strong></p>
+        <input type="text" id="shareUrl" readonly style="width: 100%; padding: 8px; margin: 5px 0;" />
+        <button onclick="copyLink()" class="btn btn-secondary btn-sm">Copy Link</button>
+        <button onclick="stopSharing()" class="btn btn-danger btn-sm">Stop Sharing</button>
+    </div>
+    
+    <div id="map" style="height: 400px; margin-top: 1rem; border-radius: 8px;"></div>
+</div>
+<script>
+let locationWatch = null;
+let marker = null;
+const map = L.map('map').setView([51.505, -0.09], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+async function toggleSharing() {
+    const btn = document.getElementById('toggleBtn');
+    if (locationWatch) {
+        locationWatch();
+        locationWatch = null;
+        btn.textContent = 'Start Sharing';
+        document.getElementById('statusText').textContent = 'Stopped';
+    } else {
+        try {
+            const loc = await getCurrentLocation();
+            marker = L.marker([loc.latitude, loc.longitude]).addTo(map).bindPopup('You are here').openPopup();
+            map.setView([loc.latitude, loc.longitude], 15);
+            
+            await fetch('/api/location/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(loc)
+            });
+            
+            locationWatch = watchLocation(async (l) => {
+                marker.setLatLng([l.latitude, l.longitude]);
+                await fetch('/api/location/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(l)
+                });
+            }, 5000);
+            
+            // Create sharing link
+            const resp = await fetch('/api/location/sharing-link', {method: 'POST'});
+            const data = await resp.json();
+            if (data.url) {
+                document.getElementById('shareUrl').value = data.url;
+                document.getElementById('sharingLink').style.display = 'block';
+            }
+            
+            btn.textContent = 'Stop Sharing';
+            document.getElementById('statusText').textContent = 'Sharing active (every 5s)';
+            showToast('Location sharing started', 'success');
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+}
+
+async function stopSharing() {
+    await fetch('/api/location/stop-sharing', {method: 'POST'});
+    document.getElementById('sharingLink').style.display = 'none';
+    if (locationWatch) { locationWatch(); locationWatch = null; }
+    document.getElementById('toggleBtn').textContent = 'Start Sharing';
+    document.getElementById('statusText').textContent = 'Stopped';
+    showToast('Sharing stopped', 'info');
+}
+
+function copyLink() {
+    document.getElementById('shareUrl').select();
+    document.execCommand('copy');
+    showToast('Link copied!', 'success');
+}
+</script>
+{% endblock %}

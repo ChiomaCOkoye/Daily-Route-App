@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RouteLink - Plan Your Route. Track Your Journey. Stay Connected.">
+    <meta name="theme-color" content="#2563eb">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('manifest') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+    
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js for reports -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <title>{% block title %}RouteLink{% endblock %} - Plan Your Route. Track Your Journey. Stay Connected.</title>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                🗺️ RouteLink
+            </a>
+            
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span class="hamburger"></span>
+            </button>
+            
+            <div class="nav-menu" id="navMenu">
+                <a href="{{ url_for('route_planner') }}" class="nav-link">Route Planner</a>
+                <a href="{{ url_for('nearby_places') }}" class="nav-link">Nearby Places</a>
+                
+                {% if user %}
+                    {% if user.role == 'driver' %}
+                        <a href="{{ url_for('driver_dashboard') }}" class="nav-link">Driver Dashboard</a>
+                        <a href="{{ url_for('drivers_nearby') }}" class="nav-link">Nearby Drivers</a>
+                    {% elif user.role == 'business_owner' %}
+                        <a href="{{ url_for('business_dashboard') }}" class="nav-link">Business Dashboard</a>
+                        <a href="{{ url_for('business_drivers') }}" class="nav-link">Manage Drivers</a>
+                        <a href="{{ url_for('business_reports') }}" class="nav-link">Reports</a>
+                        <a href="{{ url_for('business_ai_assistant') }}" class="nav-link">AI Assistant</a>
+                    {% endif %}
+                    
+                    {% if user.role != 'business_owner' %}
+                        <a href="{{ url_for('share_location') }}" class="nav-link">Share Location</a>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('emergency_dashboard') }}" class="nav-link nav-emergency">🚨 Emergency</a>
+                    
+                    <div class="nav-user">
+                        <span class="user-name">{{ user.name }}</span>
+                        <span class="user-role badge badge-{{ user.role }}">{{ user.role }}</span>
+                    </div>
+                    
+                    <a href="{{ url_for('logout') }}" class="nav-link btn-logout">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                    <a href="{{ url_for('register') }}" class="nav-link btn-register">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        {{ message }}
+                        <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <p>&copy; 2024 RouteLink. University Final Year Project.</p>
+            <p>Built with Flask, Leaflet, OpenStreetMap, and OSRM.</p>
+            <div class="footer-links">
+                <a href="{{ url_for('download_page') }}">Download PWA</a>
+                <a href="{{ url_for('emergency_dashboard') }}">Emergency Dashboard</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- Leaflet JS for maps -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Main JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

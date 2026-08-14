@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Journey History{% endblock %}
+
+{% block content %}
+<h1 class="page-title">📋 Journey History</h1>
+
+<div class="card">
+    <a href="{{ url_for('driver_dashboard') }}" class="btn btn-secondary btn-sm mb-2">← Back to Dashboard</a>
+    
+    {% if journeys %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Start → Destination</th>
+                <th>Distance</th>
+                <th>Duration</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for journey in journeys %}
+            <tr>
+                <td>{{ format_date(journey.start_time, true) }}</td>
+                <td>Route #{{ journey.id }}</td>
+                <td>{{ '%.2f'|format(journey.distance or 0) }} km</td>
+                <td>{{ (journey.duration or 0)|round|int }} min</td>
+                <td>
+                    <span class="badge badge-{{ 'success' if journey.status == 'completed' else 'warning' }}">
+                        {{ journey.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No journeys recorded yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

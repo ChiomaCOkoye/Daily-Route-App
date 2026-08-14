@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Download App{% endblock %}
+{% block content %}
+<h1 class="page-title">📱 Download RouteLink</h1>
+<div class="card text-center">
+    <h3>Install as Progressive Web App</h3>
+    <p>Get quick access to RouteLink on your mobile device!</p>
+    
+    <div style="margin:2rem 0;">
+        <img src="{{ url_for('serve_qr_code') }}" alt="QR Code" style="max-width:300px; border:1px solid #ddd; padding:1rem; border-radius:8px;">
+        <p>Scan this QR code with your phone</p>
+    </div>
+    
+    <p><strong>Or visit:</strong> <code>{{ app_url }}</code></p>
+    
+    <div style="margin-top:2rem; text-align:left;">
+        <h4>Installation Instructions:</h4>
+        <ol>
+            <li><strong>iOS Safari:</strong> Tap Share → Add to Home Screen</li>
+            <li><strong>Android Chrome:</strong> Tap menu → Install App</li>
+            <li><strong>Desktop:</strong> Look for install icon in address bar</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

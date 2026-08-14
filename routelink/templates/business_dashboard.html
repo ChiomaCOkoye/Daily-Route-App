@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Business Dashboard{% endblock %}
+{% block content %}
+<h1 class="page-title">🏢 Business Dashboard - {{ company.name }}</h1>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="card text-center">
+        <h3>Total Drivers</h3>
+        <p style="font-size: 2rem; font-weight: bold;">{{ stats.total_drivers }}</p>
+    </div>
+    <div class="card text-center">
+        <h3>Online</h3>
+        <p style="font-size: 2rem; font-weight: bold; color: #10b981;">{{ stats.online_drivers }}</p>
+    </div>
+    <div class="card text-center">
+        <h3>Active Journeys</h3>
+        <p style="font-size: 2rem; font-weight: bold; color: #f59e0b;">{{ stats.active_journeys }}</p>
+    </div>
+    <div class="card text-center">
+        <h3>Completed</h3>
+        <p style="font-size: 2rem; font-weight: bold; color: #2563eb;">{{ stats.completed_journeys }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Live Driver Map</h3>
+    <div id="driverMap" style="height: 400px; border-radius: 8px;"></div>
+</div>
+
+<div class="card mt-2">
+    <h3>Quick Actions</h3>
+    <a href="{{ url_for('business_drivers') }}" class="btn btn-primary">Manage Drivers</a>
+    <a href="{{ url_for('business_reports') }}" class="btn btn-secondary">View Reports</a>
+    <a href="{{ url_for('business_ai_assistant') }}" class="btn btn-success">AI Assistant</a>
+</div>
+
+<script>
+const socket = io();
+const map = L.map('driverMap').setView([51.505, -0.09], 10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+// Load initial driver locations
+{% for driver in drivers %}
+{% if driver.current_lat and driver.current_lng %}
+const marker{{ driver.id }} = L.marker([{{ driver.current_lat }}, {{ driver.current_lng }}]).addTo(map)
+    .bindPopup('<b>{{ driver.name }}</b><br>Vehicle: {{ driver.vehicle_number or 'N/A' }}<br>Status: {{ driver.status }}');
+{% endif %}
+{% endfor %}
+
+socket.on('connect', () => {
+    socket.emit('request_location_update');
+});
+
+socket.on('driver_locations', (data) => {
+    data.drivers.forEach(d => {
+        // Update or create markers
+    });
+});
+
+socket.on('driver_status_update', (data) => {
+    showToast(`Driver status updated: ${data.status}`, 'info');
+});
+</script>
+{% endblock %}

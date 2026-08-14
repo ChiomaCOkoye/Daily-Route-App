@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Manage Drivers{% endblock %}
+{% block content %}
+<h1 class="page-title">👥 Manage Drivers - {{ company.name }}</h1>
+
+<button onclick="showAddDriverModal()" class="btn btn-primary mb-2">+ Add Driver</button>
+
+<div class="card">
+    {% if drivers %}
+    <table class="table">
+        <thead><tr><th>Name</th><th>Email</th><th>Vehicle</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for driver in drivers %}
+        <tr>
+            <td>{{ driver.name }}</td>
+            <td>{{ driver.email }}</td>
+            <td>{{ driver.vehicle_number or 'Not set' }}</td>
+            <td><span class="badge badge-{{ 'success' if driver.status == 'Online' else 'warning' if driver.status == 'On Journey' else 'secondary' }}">{{ driver.status }}</span></td>
+            <td>
+                <button class="btn btn-sm btn-secondary">View Details</button>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No drivers registered yet.</p>
+    {% endif %}
+</div>
+
+<!-- Add Driver Modal -->
+<div id="addDriverModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999;">
+    <div style="background:white; padding:2rem; max-width:500px; margin:100px auto; border-radius:8px;">
+        <h3>Add New Driver</h3>
+        <input type="text" id="driverName" placeholder="Full Name" style="width:100%; padding:8px; margin:5px 0;">
+        <input type="email" id="driverEmail" placeholder="Email" style="width:100%; padding:8px; margin:5px 0;">
+        <input type="text" id="vehicleNumber" placeholder="Vehicle Number" style="width:100%; padding:8px; margin:5px 0;">
+        <button onclick="addDriver()" class="btn btn-primary">Add Driver</button>
+        <button onclick="document.getElementById('addDriverModal').style.display='none'" class="btn btn-secondary">Cancel</button>
+    </div>
+</div>
+
+<script>
+function showAddDriverModal() { document.getElementById('addDriverModal').style.display = 'block'; }
+
+async function addDriver() {
+    const name = document.getElementById('driverName').value;
+    const email = document.getElementById('driverEmail').value;
+    const vehicle = document.getElementById('vehicleNumber').value;
+    
+    if (!name || !email || !vehicle) { alert('All fields required'); return; }
+    
+    const resp = await fetch('/api/business/add-driver', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name, email, vehicle_number: vehicle})
+    });
+    const data = await resp.json();
+    if (data.status === 'ok') {
+        showToast(data.message, 'success');
+        location.reload();
+    } else {
+        showToast(data.error, 'error');
+    }
+}
+</script>
+{% endblock %}

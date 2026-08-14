@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Emergency Dashboard{% endblock %}
+{% block content %}
+<h1 class="page-title">🚨 Emergency Dashboard</h1>
+
+<button onclick="triggerEmergency()" class="btn btn-danger btn-lg mb-2" style="animation: pulse 1s infinite;">
+    🚨 TRIGGER EMERGENCY ALERT
+</button>
+
+<div class="card">
+    <h3>Active Emergencies</h3>
+    {% if emergencies %}
+    <table class="table">
+        <thead><tr><th>Time</th><th>Sender</th><th>Category</th><th>Priority</th><th>Message</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for alert in emergencies %}
+        <tr>
+            <td>{{ time_ago(alert.timestamp) }}</td>
+            <td>{{ alert.sender_name }}</td>
+            <td>{{ alert.category }}</td>
+            <td><span class="badge badge-{{ 'danger' if alert.priority == 'CRITICAL' else 'warning' if alert.priority == 'HIGH' else 'info' }}">{{ alert.priority }}</span></td>
+            <td>{{ alert.message }}</td>
+            <td><button onclick="resolveAlert({{ alert.id }})" class="btn btn-success btn-sm">Resolve</button></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No active emergencies.</p>
+    {% endif %}
+</div>
+
+<div id="emergencyMap" style="height: 400px; margin-top: 1rem; border-radius: 8px;"></div>
+
+<script>
+const socket = io();
+const map = L.map('emergencyMap').setView([51.505, -0.09], 10);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+// Add markers for existing emergencies
+{% for alert in emergencies %}
+L.marker([{{ alert.latitude }}, {{ alert.longitude }}]).addTo(map)
+    .bindPopup('<b>{{ alert.category }}</b><br>{{ alert.message }}<br>Priority: {{ alert.priority }}');
+{% endfor %}
+
+socket.on('emergency_alert', (data) => {
+    showToast('🚨 New emergency alert!', 'error');
+    L.marker([data.lat, data.lng]).addTo(map).bindPopup('New Emergency!').openPopup();
+});
+
+async function triggerEmergency() {
+    if (!confirm('🚨 TRIGGER EMERGENCY?\n\nThis will notify all authorized personnel.')) return;
+    const msg = prompt('Describe emergency:') || 'Emergency alert';
+    
+    try {
+        const loc = await getCurrentLocation();
+        const resp = await fetch('/api/emergency/alert', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({latitude: loc.latitude, longitude: loc.longitude, message: msg, priority: 'HIGH'})
+        });
+        if ((await resp.json()).status === 'ok') {
+            showToast('Emergency alert sent!', 'success');
+            location.reload();
+        }
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function resolveAlert(id) {
+    await fetch(`/api/emergency/${id}/resolve`, {method: 'POST'});
+    showToast('Alert resolved', 'success');
+    location.reload();
+}
+</script>
+<style>@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }</style>
+{% endblock %}

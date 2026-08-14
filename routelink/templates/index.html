@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-content">
+        <h1 class="hero-title">Plan Your Route. Track Your Journey. Stay Connected.</h1>
+        <p class="hero-subtitle">RouteLink is your all-in-one travel assistance platform for route planning, real-time tracking, and driver management.</p>
+        
+        <div class="hero-buttons">
+            <a href="{{ url_for('route_planner') }}" class="btn btn-primary btn-lg">
+                🗺️ Plan Your Route
+            </a>
+            {% if not user %}
+                <a href="{{ url_for('register') }}" class="btn btn-secondary btn-lg">
+                    Get Started
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features">
+    <h2 class="section-title">Key Features</h2>
+    
+    <div class="features-grid">
+        <!-- Feature Card 1: Route Planning -->
+        <div class="feature-card">
+            <div class="feature-icon">🗺️</div>
+            <h3>Route Planning</h3>
+            <p>Plan routes with multiple stops using OpenStreetMap and OSRM. Find the shortest path and alternative routes.</p>
+            <a href="{{ url_for('route_planner') }}" class="feature-link">Try it now →</a>
+        </div>
+        
+        <!-- Feature Card 2: Location Sharing -->
+        <div class="feature-card">
+            <div class="feature-icon">📍</div>
+            <h3>Location Sharing</h3>
+            <p>Share your real-time location with friends and family. Generate secure sharing links that expire automatically.</p>
+            {% if user %}
+                <a href="{{ url_for('share_location') }}" class="feature-link">Share location →</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="feature-link">Sign up to share →</a>
+            {% endif %}
+        </div>
+        
+        <!-- Feature Card 3: Driver Tracking -->
+        <div class="feature-card">
+            <div class="feature-icon">🚗</div>
+            <h3>Driver System</h3>
+            <p>For professional drivers: track journeys, manage status, and view history. Perfect for delivery and transport services.</p>
+            {% if user and user.role == 'driver' %}
+                <a href="{{ url_for('driver_dashboard') }}" class="feature-link">Go to dashboard →</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="feature-link">Register as driver →</a>
+            {% endif %}
+        </div>
+        
+        <!-- Feature Card 4: Business Management -->
+        <div class="feature-card">
+            <div class="feature-icon">🏢</div>
+            <h3>Business Dashboard</h3>
+            <p>Manage your fleet of drivers, view live locations, generate performance reports, and get AI-powered insights.</p>
+            {% if user and user.role == 'business_owner' %}
+                <a href="{{ url_for('business_dashboard') }}" class="feature-link">Open dashboard →</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="feature-link">Register business →</a>
+            {% endif %}
+        </div>
+        
+        <!-- Feature Card 5: Emergency Alerts -->
+        <div class="feature-card">
+            <div class="feature-icon">🚨</div>
+            <h3>Emergency Support</h3>
+            <p>Quick emergency alerts with GPS location. AI-assisted categorization and priority suggestions for faster response.</p>
+            <a href="{{ url_for('emergency_dashboard') }}" class="feature-link">View emergencies →</a>
+        </div>
+        
+        <!-- Feature Card 6: Nearby Places -->
+        <div class="feature-card">
+            <div class="feature-icon">⛽</div>
+            <h3>Nearby Places</h3>
+            <p>Find fuel stations, restaurants, hospitals, banks, and more around your location using OpenStreetMap data.</p>
+            <a href="{{ url_for('nearby_places') }}" class="feature-link">Search nearby →</a>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="how-it-works">
+    <h2 class="section-title">How It Works</h2>
+    
+    <div class="steps">
+        <div class="step">
+            <div class="step-number">1</div>
+            <h3>Plan Your Route</h3>
+            <p>Enter start, destination, and any stops. Our system calculates the best routes using OSRM.</p>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">2</div>
+            <h3>Track & Share</h3>
+            <p>Share your location in real-time or track your journey progress with automatic updates.</p>
+        </div>
+        
+        <div class="step">
+            <div class="step-number">3</div>
+            <h3>Stay Safe</h3>
+            <p>Access emergency features, find nearby services, and stay connected throughout your journey.</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta">
+    <h2>Ready to Get Started?</h2>
+    <p>Join RouteLink today and experience smarter travel planning.</p>
+    {% if not user %}
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Create Free Account</a>
+    {% else %}
+        <a href="{{ url_for('route_planner') }}" class="btn btn-primary btn-lg">Start Planning</a>
+    {% endif %}
+</section>
+{% endblock %}

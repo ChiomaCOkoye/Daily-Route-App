@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Business Reports{% endblock %}
+{% block content %}
+<h1 class="page-title">📊 Business Reports</h1>
+
+<div class="card mb-2">
+    <h3>Filters</h3>
+    <form method="GET" style="display:flex; gap:1rem; flex-wrap:wrap;">
+        <input type="date" name="start_date" value="{{ start_date }}" placeholder="Start Date">
+        <input type="date" name="end_date" value="{{ end_date }}" placeholder="End Date">
+        <select name="driver_id">
+            <option value="">All Drivers</option>
+            {% for driver in drivers %}
+            <option value="{{ driver.id }}" {{ 'selected' if selected_driver_id == driver.id }}>{{ driver.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{{ url_for('reports_download_csv', start_date=start_date, end_date=end_date) }}" class="btn btn-success">Download CSV</a>
+    </form>
+</div>
+
+<div class="card mb-2">
+    <h3>Driver Performance Scores</h3>
+    <table class="table">
+        <thead><tr><th>Driver</th><th>Vehicle</th><th>Journeys</th><th>Completion</th><th>Performance Score</th></tr></thead>
+        <tbody>
+        {% for stat in driver_stats %}
+        <tr>
+            <td>{{ stat.driver_name }}</td>
+            <td>{{ stat.vehicle_number }}</td>
+            <td>{{ stat.total_journeys }}</td>
+            <td>{{ stat.completion_rate }}%</td>
+            <td><strong>{{ stat.performance_score }}</strong></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h3>Journey Data</h3>
+    <canvas id="journeyChart" style="max-height: 300px;"></canvas>
+</div>
+
+<script>
+const ctx = document.getElementById('journeyChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: [{% for stat in driver_stats %}'{{ stat.driver_name }}',{% endfor %}],
+        datasets: [{
+            label: 'Journeys Completed',
+            data: [{% for stat in driver_stats %}{{ stat.completed_journeys }},{% endfor %}],
+            backgroundColor: '#2563eb'
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+</script>
+{% endblock %}

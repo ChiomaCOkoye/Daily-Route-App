@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}AI Business Assistant{% endblock %}
+{% block content %}
+<h1 class="page-title">🤖 AI Business Assistant</h1>
+
+<div class="card">
+    <h3>Company Overview</h3>
+    <p>Total Drivers: {{ stats.total_drivers }} | Online: {{ stats.online_drivers }} | Journeys: {{ stats.total_journeys }} | Completed: {{ stats.completed_journeys }}</p>
+</div>
+
+<div class="card">
+    <h3>Ask Questions About Your Business</h3>
+    <div id="chatMessages" class="chat-messages" style="max-height:300px; overflow-y:auto; background:#f8f9fa; padding:1rem; margin-bottom:1rem; border-radius:4px;">
+        <div class="chat-message ai">Hello! I'm your RouteLink Business Assistant. Ask me about your company's performance, driver statistics, or journey data.</div>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+        <input type="text" id="chatInput" placeholder="Ask a question..." style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
+        <button id="sendChatBtn" class="btn btn-primary">Send</button>
+    </div>
+</div>
+
+<script>
+const contextData = {{ stats | tojson }};
+
+document.getElementById('sendChatBtn').addEventListener('click', async () => {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+    
+    // Add user message
+    const messagesDiv = document.getElementById('chatMessages');
+    messagesDiv.innerHTML += `<div class="chat-message user">${msg}</div>`;
+    input.value = '';
+    
+    const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({messages: [{role:'user', content:msg}], context_type:'business', context_data:contextData})
+    });
+    const data = await resp.json();
+    messagesDiv.innerHTML += `<div class="chat-message ai">${data.response || 'AI unavailable'}</div>`;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+});
+</script>
+<style>.chat-message{padding:8px;margin:5px 0;border-radius:4px}.user{background:#e0f2fe;text-align:right}.ai{background:#f0f9ff}</style>
+{% endblock %}

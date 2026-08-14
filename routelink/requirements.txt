@@ -1,0 +1,26 @@
+# RouteLink - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core Framework
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Real-time Communication
+flask-socketio==5.3.6
+python-socketio==5.10.0
+
+# Database (SQLite is built-in, no additional package needed)
+
+# QR Code Generation
+qrcode[pil]==7.4.2
+Pillow==10.1.0
+
+# Production Server (optional, for deployment)
+gunicorn==21.2.0
+eventlet==0.34.2
+
+# Environment Variables (optional but recommended)
+python-dotenv==1.0.0
+
+# Note: No React, Vue, Angular, Node.js, MongoDB, or Firebase
+# Pure Python/Flask with vanilla JavaScript frontend

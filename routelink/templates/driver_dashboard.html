@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Driver Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="page-title">🚗 Driver Dashboard</h1>
+
+{% if not driver %}
+<div class="card">
+    <p>You don't have a driver profile yet. Please contact your company administrator.</p>
+</div>
+{% else %}
+<div class="driver-dashboard">
+    <!-- Status Card -->
+    <div class="card">
+        <h2 class="card-title">Current Status</h2>
+        <div class="status-display">
+            <span id="currentStatus" class="status-badge status-{{ driver.status | lower }}">{{ driver.status }}</span>
+        </div>
+        
+        <div class="status-controls" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button onclick="updateStatus('Offline')" class="btn btn-secondary btn-sm">⏸️ Offline</button>
+            <button onclick="updateStatus('Online')" class="btn btn-primary btn-sm">▶️ Online</button>
+            <button onclick="startJourneyPrompt()" class="btn btn-success btn-sm">🚀 Start Journey</button>
+            <button onclick="triggerEmergency()" class="btn btn-danger btn-sm">🚨 Emergency</button>
+        </div>
+    </div>
+    
+    <!-- Vehicle Info -->
+    <div class="card">
+        <h2 class="card-title">Vehicle Information</h2>
+        <table class="table">
+            <tr>
+                <td><strong>Vehicle Number:</strong></td>
+                <td>{{ driver.vehicle_number or 'Not set' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Company:</strong></td>
+                <td>{{ driver.company_id and 'Active' or 'No company assigned' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td id="statusText">{{ driver.status }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- Current Journey -->
+    <div class="card" id="currentJourneyCard" style="display: none;">
+        <h2 class="card-title">🚦 Current Journey</h2>
+        <div id="journeyInfo"></div>
+        <button onclick="completeCurrentJourney()" class="btn btn-success btn-block mt-2">✓ Complete Journey</button>
+    </div>
+    
+    <!-- Location Sharing Status -->
+    <div class="card">
+        <h2 class="card-title">📍 Location Tracking</h2>
+        <div id="locationStatus">
+            <p>Location updates: <span id="locationUpdates">Inactive</span></p>
+            <button id="toggleLocationBtn" onclick="toggleLocationTracking()" class="btn btn-primary btn-sm">
+                Start Location Updates
+            </button>
+        </div>
+    </div>
+    
+    <!-- Recent Journeys Preview -->
+    <div class="card">
+        <h2 class="card-title">Recent Journeys</h2>
+        <a href="{{ url_for('driver_journeys') }}" class="btn btn-secondary btn-sm">View All Journeys →</a>
+    </div>
+</div>
+
+<script>
+// ==================== DRIVER DASHBOARD JAVASCRIPT ====================
+
+let locationWatchStop = null;
+let currentJourneyId = null;
+let isTrackingLocation = false;
+
+// Initialize Socket.IO for real-time updates
+const socket = io();
+
+// Update driver status
+async function updateStatus(status) {
+    try {
+        const location = await getCurrentLocation().catch(() => null);
+        
+        const response = await fetch('/api/driver/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                status: status,
+                latitude: location?.latitude,
+                longitude: location?.longitude
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+            document.getElementById('currentStatus').textContent = status;
+            document.getElementById('currentStatus').className = `status-badge status-${status.toLowerCase()}`;
+            document.getElementById('statusText').textContent = status;
+            showToast(`Status updated to ${status}`, 'success');
+        }
+    } catch (error) {
+        console.error('Status update error:', error);
+        showToast('Failed to update status', 'error');
+    }
+}
+
+// Prompt to start journey
+async function startJourneyPrompt() {
+    const destination = prompt('Enter destination:');
+    if (!destination) return;
+    
+    // Get current location
+    try {
+        const location = await getCurrentLocation();
+        
+        // Geocode destination
+        const geoResponse = await fetch(`/api/geocode?q=${encodeURIComponent(destination)}`);
+        const destData = await geoResponse.json();
+        
+        if (!destData.lat) {
+            alert('Destination not found');
+            return;
+        }
+        
+        // Start journey
+        const response = await fetch('/api/driver/journey/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                start_lat: location.latitude,
+                start_lng: location.longitude,
+                dest_lat: destData.lat,
+                dest_lng: destData.lng,
+                destination: destination,
+                distance: 0,
+                duration: 0
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+            currentJourneyId = data.journey_id;
+            document.getElementById('currentJourneyCard').style.display = 'block';
+            document.getElementById('journeyInfo').innerHTML = `
+                <p><strong>Destination:</strong> ${destination}</p>
+                <p><strong>Started:</strong> ${new Date().toLocaleString()}</p>
+            `;
+            updateStatus('On Journey');
+            showToast('Journey started!', 'success');
+        }
+    } catch (error) {
+        console.error('Start journey error:', error);
+        showToast('Failed to start journey', 'error');
+    }
+}
+
+// Complete current journey
+async function completeCurrentJourney() {
+    if (!currentJourneyId) return;
+    
+    try {
+        const response = await fetch(`/api/driver/journey/complete/${currentJourneyId}`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+            document.getElementById('currentJourneyCard').style.display = 'none';
+            currentJourneyId = null;
+            updateStatus('Online');
+            showToast('Journey completed!', 'success');
+        }
+    } catch (error) {
+        console.error('Complete journey error:', error);
+        showToast('Failed to complete journey', 'error');
+    }
+}
+
+// Toggle location tracking
+function toggleLocationTracking() {
+    if (isTrackingLocation) {
+        // Stop tracking
+        if (locationWatchStop) {
+            locationWatchStop();
+            locationWatchStop = null;
+        }
+        document.getElementById('locationUpdates').textContent = 'Inactive';
+        document.getElementById('toggleLocationBtn').textContent = 'Start Location Updates';
+        isTrackingLocation = false;
+    } else {
+        // Start tracking
+        getCurrentLocation().then(async location => {
+            // Send initial location
+            await fetch('/api/location/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(location)
+            });
+            
+            // Start watching
+            locationWatchStop = watchLocation(async (loc) => {
+                await fetch('/api/location/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loc)
+                });
+                
+                // Also update driver status location if on journey
+                if (document.getElementById('statusText').textContent === 'On Journey') {
+                    await fetch('/api/driver/status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: 'On Journey',
+                            latitude: loc.latitude,
+                            longitude: loc.longitude
+                        })
+                    });
+                }
+            }, 5000); // Update every 5 seconds
+            
+            document.getElementById('locationUpdates').textContent = 'Active (every 5s)';
+            document.getElementById('toggleLocationBtn').textContent = 'Stop Location Updates';
+            isTrackingLocation = true;
+            showToast('Location tracking started', 'success');
+        }).catch(err => {
+            showToast(err.message, 'error');
+        });
+    }
+}
+
+// Trigger emergency alert
+async function triggerEmergency() {
+    if (!confirm('🚨 TRIGGER EMERGENCY ALERT?\n\nThis will notify all authorized personnel of your emergency.')) {
+        return;
+    }
+    
+    const message = prompt('Describe your emergency (optional):') || 'Emergency alert triggered';
+    
+    try {
+        const location = await getCurrentLocation();
+        
+        const response = await fetch('/api/emergency/alert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                latitude: location.latitude,
+                longitude: location.longitude,
+                message: message,
+                category: 'Other',
+                priority: 'HIGH'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+            showToast('Emergency alert sent! Help is on the way.', 'success');
+            updateStatus('Emergency');
+        }
+    } catch (error) {
+        console.error('Emergency alert error:', error);
+        showToast('Failed to send emergency alert', 'error');
+    }
+}
+
+// Listen for WebSocket updates
+socket.on('connect', () => {
+    console.log('Connected to real-time updates');
+});
+</script>
+
+<style>
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    display: inline-block;
+}
+.status-offline { background: #e5e7eb; color: #374151; }
+.status-online { background: #dbeafe; color: #1e40af; }
+.status-on-journey { background: #fef3c7; color: #92400e; }
+.status-emergency { background: #fee2e2; color: #991b1b; animation: pulse 1s infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.driver-dashboard {
+    max-width: 800px;
+}
+</style>
+{% endif %}
+{% endblock %}

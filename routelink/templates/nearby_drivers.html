@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Nearby Drivers{% endblock %}
+{% block content %}
+<h1 class="page-title">🚗 Nearby Drivers</h1>
+<div class="card">
+    {% if current_location %}
+    <p>Your location: {{ current_location.latitude }}, {{ current_location.longitude }}</p>
+    {% else %}
+    <p>Please enable location sharing to see nearby drivers.</p>
+    <a href="{{ url_for('share_location') }}" class="btn btn-primary">Share Location First</a>
+    {% endif %}
+</div>
+
+{% if nearby_drivers %}
+<div class="card">
+    <h3>Drivers Near You</h3>
+    <table class="table">
+        <thead><tr><th>Driver</th><th>Vehicle</th><th>Status</th><th>Distance</th><th>Destination</th></tr></thead>
+        <tbody>
+        {% for driver in nearby_drivers %}
+        <tr>
+            <td>{{ driver.name }}</td>
+            <td>{{ driver.vehicle_number or 'N/A' }}</td>
+            <td><span class="badge badge-{{ 'success' if driver.status == 'Online' else 'warning' }}">{{ driver.status }}</span></td>
+            <td>{{ '%.2f'|format(driver.distance) }} km</td>
+            <td>{{ driver.destination or 'N/A' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card"><p>No online drivers nearby.</p></div>
+{% endif %}
+{% endblock %}

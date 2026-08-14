@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Nearby Places{% endblock %}
+{% block content %}
+<h1 class="page-title">⛽ Nearby Places</h1>
+
+<div class="card">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <button onclick="searchPlaces('fuel')" class="btn btn-sm btn-secondary">⛽ Fuel</button>
+        <button onclick="searchPlaces('restaurant')" class="btn btn-sm btn-secondary">🍽️ Restaurants</button>
+        <button onclick="searchPlaces('hospital')" class="btn btn-sm btn-secondary">🏥 Hospitals</button>
+        <button onclick="searchPlaces('bank')" class="btn btn-sm btn-secondary">🏦 Banks</button>
+        <button onclick="searchPlaces('pharmacy')" class="btn btn-sm btn-secondary">💊 Pharmacies</button>
+        <button onclick="searchPlaces('hotel')" class="btn btn-sm btn-secondary">🏨 Hotels</button>
+        <button onclick="searchPlaces('all')" class="btn btn-sm btn-primary">All Places</button>
+    </div>
+    <div id="map" style="height:400px; border-radius:8px;"></div>
+    <div id="results" class="mt-2"></div>
+</div>
+
+<script>
+let map, userMarker, placeMarkers = [];
+map = L.map('map').setView([51.505, -0.09], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+getCurrentLocation().then(loc => {
+    userMarker = L.marker([loc.latitude, loc.longitude]).addTo(map).bindPopup('You are here').openPopup();
+    map.setView([loc.latitude, loc.longitude], 14);
+}).catch(e => console.log('Location denied'));
+
+async function searchPlaces(category) {
+    placeMarkers.forEach(m => map.removeLayer(m));
+    placeMarkers = [];
+    
+    try {
+        const loc = await getCurrentLocation();
+        const resp = await fetch(`/api/nearby-places?lat=${loc.latitude}&lng=${loc.longitude}&category=${category}`);
+        const places = await resp.json();
+        
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '<h3>Found Places:</h3>';
+        
+        places.forEach(p => {
+            const m = L.marker([p.lat, p.lng]).addTo(map).bindPopup(`<b>${p.name}</b><br>${p.distance}km away`);
+            placeMarkers.push(m);
+            resultsDiv.innerHTML += `<div style="padding:8px; border-bottom:1px solid #eee;"><strong>${p.name}</strong> - ${p.distance}km</div>`;
+        });
+        
+        if (!places.length) resultsDiv.innerHTML += '<p>No places found.</p>';
+    } catch (e) { showToast('Enable location to search', 'error'); }
+}
+</script>
+{% endblock %}

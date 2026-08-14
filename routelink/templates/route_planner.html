@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+
+{% block title %}Route Planner{% endblock %}
+
+{% block extra_head %}
+<style>
+    .route-planner-container {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 20px;
+        height: calc(100vh - 200px);
+        min-height: 600px;
+    }
+    
+    #map {
+        width: 100%;
+        height: 100%;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .route-controls {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow-y: auto;
+        max-height: calc(100vh - 200px);
+    }
+    
+    .location-inputs {
+        margin-bottom: 20px;
+    }
+    
+    .stop-item {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+    
+    .stop-item input {
+        flex: 1;
+    }
+    
+    .btn-remove-stop {
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+    
+    .route-results {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        display: none;
+    }
+    
+    .route-results.active {
+        display: block;
+    }
+    
+    .route-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .route-stat:last-child {
+        border-bottom: none;
+    }
+    
+    .route-option {
+        padding: 12px;
+        margin: 8px 0;
+        background: white;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .route-option:hover {
+        border-color: #2563eb;
+    }
+    
+    .route-option.selected {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
+    
+    .route-option.recommended {
+        border-color: #10b981;
+        background: #ecfdf5;
+    }
+    
+    .badge-recommended {
+        background: #10b981;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        margin-left: 8px;
+    }
+    
+    .ai-assistant-panel {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f0f9ff;
+        border-radius: 8px;
+        border: 1px solid #bae6fd;
+    }
+    
+    .chat-messages {
+        max-height: 200px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 4px;
+    }
+    
+    .chat-message {
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 4px;
+    }
+    
+    .chat-message.user {
+        background: #e0f2fe;
+        text-align: right;
+    }
+    
+    .chat-message.ai {
+        background: #f0f9ff;
+        text-align: left;
+    }
+    
+    @media (max-width: 768px) {
+        .route-planner-container {
+            grid-template-columns: 1fr;
+        }
+        
+        #map {
+            height: 400px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">🗺️ Route Planner</h1>
+
+<div class="route-planner-container">
+    <!-- Map Container -->
+    <div id="map"></div>
+    
+    <!-- Controls Panel -->
+    <div class="route-controls">
+        <h3>Plan Your Route</h3>
+        
+        <form id="routeForm">
+            <div class="location-inputs">
+                <div class="form-group">
+                    <label for="startLocation">📍 Start Location</label>
+                    <input type="text" id="startLocation" name="start" required 
+                           placeholder="Enter starting point" class="geocode-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="destination">🏁 Destination</label>
+                    <input type="text" id="destination" name="destination" required 
+                           placeholder="Enter destination" class="geocode-input">
+                </div>
+            </div>
+            
+            <!-- Multiple Stops -->
+            <div class="form-group">
+                <label>🛑 Stops (Optional)</label>
+                <div id="stopsContainer">
+                    <!-- Stops will be added here dynamically -->
+                </div>
+                <button type="button" id="addStopBtn" class="btn btn-secondary btn-sm">
+                    + Add Stop
+                </button>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">
+                Calculate Route
+            </button>
+        </form>
+        
+        <!-- Route Results -->
+        <div id="routeResults" class="route-results">
+            <h4>Route Options</h4>
+            <div id="routeOptions"></div>
+            
+            <div class="route-stats">
+                <div class="route-stat">
+                    <span>📏 Total Distance:</span>
+                    <strong id="totalDistance">-</strong>
+                </div>
+                <div class="route-stat">
+                    <span>⏱️ Estimated Duration:</span>
+                    <strong id="totalDuration">-</strong>
+                </div>
+                <div class="route-stat">
+                    <span>🛑 Number of Stops:</span>
+                    <strong id="numStops">0</strong>
+                </div>
+            </div>
+            
+            <!-- AI Travel Assistant -->
+            <div class="ai-assistant-panel">
+                <h4>🤖 RouteLink Travel Assistant</h4>
+                <div id="chatMessages" class="chat-messages">
+                    <div class="chat-message ai">
+                        Hello! I'm your RouteLink Travel Assistant. Ask me about your route, nearby places, or travel tips!
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="chatInput" placeholder="Ask a question..." 
+                           style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button id="sendChatBtn" class="btn btn-primary btn-sm">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/ai_assistant.js') }}"></script>
+<script>
+// ==================== ROUTE PLANNER JAVASCRIPT ====================
+
+// Initialize map with default view
+const map = L.map('map').setView([51.505, -0.09], 13);
+
+// Add OpenStreetMap tiles
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+}).addTo(map);
+
+// Custom marker icons for different location types
+const startIcon = L.divIcon({
+    html: '<div style="background-color: #10b981; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+    className: 'custom-marker',
+    iconSize: [20, 20]
+});
+
+const stopIcon = L.divIcon({
+    html: '<div style="background-color: #f59e0b; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+    className: 'custom-marker',
+    iconSize: [16, 16]
+});
+
+const destinationIcon = L.divIcon({
+    html: '<div style="background-color: #ef4444; width: 20px; height: 20px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+    className: 'custom-marker',
+    iconSize: [20, 20]
+});
+
+// Store markers and route layers
+let markers = [];
+let routeLayers = [];
+let currentRouteData = null;
+
+// ==================== STOP MANAGEMENT ====================
+
+let stopCount = 0;
+
+document.getElementById('addStopBtn').addEventListener('click', function() {
+    stopCount++;
+    const stopsContainer = document.getElementById('stopsContainer');
+    
+    const stopDiv = document.createElement('div');
+    stopDiv.className = 'stop-item';
+    stopDiv.innerHTML = `
+        <input type="text" class="geocode-input stop-location" 
+               placeholder="Stop ${stopCount}" data-stop-index="${stopCount}">
+        <button type="button" class="btn-remove-stop" onclick="removeStop(this)">✕</button>
+    `;
+    
+    stopsContainer.appendChild(stopDiv);
+    updateStopCount();
+});
+
+function removeStop(button) {
+    button.parentElement.remove();
+    updateStopCount();
+}
+
+function updateStopCount() {
+    const stops = document.querySelectorAll('.stop-location');
+    document.getElementById('numStops').textContent = stops.length;
+}
+
+// ==================== GEOCODING ====================
+
+// Debounce function to limit API calls
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Geocode location using our backend API
+async function geocodeLocation(query) {
+    if (!query || query.length < 3) return null;
+    
+    try {
+        const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error('Geocoding failed');
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Geocoding error:', error);
+        return null;
+    }
+}
+
+// ==================== ROUTE CALCULATION ====================
+
+document.getElementById('routeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const start = document.getElementById('startLocation').value;
+    const destination = document.getElementById('destination').value;
+    const stopInputs = document.querySelectorAll('.stop-location');
+    
+    // Collect all locations
+    const locations = [
+        { name: start, type: 'start' },
+        ...Array.from(stopInputs).map(input => ({ name: input.value, type: 'stop' })),
+        { name: destination, type: 'destination' }
+    ].filter(loc => loc.name.trim());
+    
+    if (locations.length < 2) {
+        alert('Please enter at least start and destination');
+        return;
+    }
+    
+    // Geocode all locations
+    const coordinates = [];
+    for (const loc of locations) {
+        const result = await geocodeLocation(loc.name);
+        if (result) {
+            coordinates.push([result.lng, result.lat]); // OSRM expects [lng, lat]
+            loc.coords = { lat: result.lat, lng: result.lng };
+        } else {
+            alert(`Could not find location: ${loc.name}`);
+            return;
+        }
+    }
+    
+    // Clear existing markers and routes
+    clearMarkers();
+    clearRoutes();
+    
+    // Add markers to map
+    locations.forEach((loc, index) => {
+        let icon;
+        if (loc.type === 'start') icon = startIcon;
+        else if (loc.type === 'destination') icon = destinationIcon;
+        else icon = stopIcon;
+        
+        const marker = L.marker([loc.coords.lat, loc.coords.lng], { icon }).addTo(map);
+        marker.bindPopup(`<b>${loc.type === 'start' ? 'Start' : loc.type === 'destination' ? 'Destination' : `Stop ${index}`}</b><br>${loc.name}`);
+        markers.push(marker);
+    });
+    
+    // Fit map to show all markers
+    if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+    
+    // Calculate route using OSRM
+    calculateRoute(coordinates, locations);
+});
+
+async function calculateRoute(coordinates, locations) {
+    try {
+        const response = await fetch('/api/route', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ coordinates })
+        });
+        
+        if (!response.ok) throw new Error('Route calculation failed');
+        
+        const data = await response.json();
+        currentRouteData = data;
+        displayRouteOptions(data, locations);
+        
+    } catch (error) {
+        console.error('Route error:', error);
+        alert('Failed to calculate route. Please try again.');
+    }
+}
+
+// ==================== ROUTE DISPLAY ====================
+
+function displayRouteOptions(data, locations) {
+    const resultsDiv = document.getElementById('routeResults');
+    const optionsDiv = document.getElementById('routeOptions');
+    
+    resultsDiv.classList.add('active');
+    optionsDiv.innerHTML = '';
+    
+    if (!data.routes || data.routes.length === 0) {
+        optionsDiv.innerHTML = '<p>No routes found.</p>';
+        return;
+    }
+    
+    data.routes.forEach((route, index) => {
+        const isShortest = index === 0; // Routes are sorted by distance
+        
+        const optionDiv = document.createElement('div');
+        optionDiv.className = `route-option ${isShortest ? 'recommended' : ''}`;
+        optionDiv.onclick = () => selectRoute(index);
+        
+        optionDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>Route ${index + 1}</strong>
+                ${isShortest ? '<span class="badge-recommended">RECOMMENDED SHORTEST ROUTE</span>' : ''}
+            </div>
+            <div style="margin-top: 8px; font-size: 14px;">
+                📏 ${(route.distance).toFixed(2)} km | 
+                ⏱️ ${Math.round(route.duration)} min
+            </div>
+        `;
+        
+        optionsDiv.appendChild(optionDiv);
+    });
+    
+    // Display the shortest route by default
+    selectRoute(0);
+    
+    // Update stats
+    const shortest = data.routes[0];
+    document.getElementById('totalDistance').textContent = `${shortest.distance.toFixed(2)} km`;
+    document.getElementById('totalDuration').textContent = `${Math.round(shortest.duration)} minutes`;
+}
+
+function selectRoute(index) {
+    if (!currentRouteData || !currentRouteData.routes[index]) return;
+    
+    // Clear existing routes
+    clearRoutes();
+    
+    // Highlight selected option
+    document.querySelectorAll('.route-option').forEach((el, i) => {
+        el.classList.toggle('selected', i === index);
+    });
+    
+    const route = currentRouteData.routes[index];
+    
+    // Draw route on map
+    const routeLayer = L.geoJSON(route.geometry, {
+        style: {
+            color: index === 0 ? '#10b981' : '#2563eb',
+            weight: 5,
+            opacity: 0.7
+        }
+    }).addTo(map);
+    
+    routeLayers.push(routeLayer);
+    map.fitBounds(routeLayer.getBounds().pad(0.1));
+}
+
+function clearMarkers() {
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+}
+
+function clearRoutes() {
+    routeLayers.forEach(layer => map.removeLayer(layer));
+    routeLayers = [];
+}
+
+// ==================== AI ASSISTANT INTEGRATION ====================
+
+document.getElementById('sendChatBtn').addEventListener('click', sendChatMessage);
+document.getElementById('chatInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') sendChatMessage();
+});
+
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    // Add user message to chat
+    addChatMessage(message, 'user');
+    input.value = '';
+    
+    // Prepare context data from current route
+    const contextData = currentRouteData ? {
+        start: document.getElementById('startLocation').value,
+        destination: document.getElementById('destination').value,
+        stops: Array.from(document.querySelectorAll('.stop-location')).map(el => el.value).filter(v => v),
+        distance: parseFloat(document.getElementById('totalDistance').textContent),
+        duration: parseFloat(document.getElementById('totalDuration').textContent)
+    } : {};
+    
+    // Send to AI assistant
+    try {
+        const response = await fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: message }],
+                context_type: 'travel',
+                context_data: contextData
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.response) {
+            addChatMessage(data.response, 'ai');
+        } else {
+            addChatMessage('Sorry, the AI assistant is currently unavailable.', 'ai');
+        }
+    } catch (error) {
+        console.error('Chat error:', error);
+        addChatMessage('Error connecting to AI assistant.', 'ai');
+    }
+}
+
+function addChatMessage(text, sender) {
+    const messagesDiv = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${sender}`;
+    messageDiv.textContent = text;
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+</script>
+{% endblock %}

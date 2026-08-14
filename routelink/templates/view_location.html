@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}View Shared Location{% endblock %}
+{% block content %}
+<h1 class="page-title">📍 Viewing {{ link.name }}'s Location</h1>
+<div class="card">
+    <p>This location is being shared by {{ link.name }}</p>
+    {% if location %}
+    <p>Last update: {{ location.timestamp }}</p>
+    <div id="map" style="height:400px; border-radius:8px;"></div>
+    {% else %}
+    <p>No location available yet.</p>
+    {% endif %}
+</div>
+{% if location %}
+<script>
+const map = L.map('map').setView([{{ location.latitude }}, {{ location.longitude }}], 15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+L.marker([{{ location.latitude }}, {{ location.longitude }}]).addTo(map).bindPopup('{{ link.name }} is here').openPopup();
+</script>
+{% endif %}
+{% endblock %}
