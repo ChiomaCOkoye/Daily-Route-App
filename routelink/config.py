@@ -35,3 +35,6 @@ OSRM_SERVER = os.environ.get('OSRM_SERVER', 'http://router.project-osrm.org/rout
 
 # Nominatim Geocoding Server (OpenStreetMap)
 NOMINATIM_SERVER = os.environ.get('NOMINATIM_SERVER', 'https://nominatim.openstreetmap.org')
+
+# Disable Flask debug mode to prevent reloader issues with background processes
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')

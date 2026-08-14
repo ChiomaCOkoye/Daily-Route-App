@@ -32,7 +32,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_socketio import SocketIO, emit
 
 from config import (
-    SECRET_KEY, SQLALCHEMY_TRACK_MODIFICATIONS, PERMANENT_SESSION_LIFETIME,
+    SECRET_KEY, SQLALCHEMY_TRACK_MODIFICATIONS, PERMANENT_SESSION_LIFETIME, DEBUG,
     AI_API_KEY, AI_API_URL, AI_MODEL, LOCATION_UPDATE_INTERVAL, APP_URL,
     OSRM_SERVER, NOMINATIM_SERVER
 )
@@ -54,11 +54,14 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['PERMANENT_SESSION_LIFETIME'] = PERMANENT_SESSION_LIFETIME
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
+app.config['DEBUG'] = DEBUG  # Use config DEBUG setting to control debug mode
 
 # Initialize Flask-SocketIO for real-time updates
 # WebSockets allow bidirectional communication between server and clients
 # This is essential for live location tracking and real-time dashboard updates
-socketio = SocketIO(app, cors_allowed_origins="*")
+# Using async_mode='threading' for maximum compatibility across Python versions
+# This avoids issues with eventlet/gevent on newer Python versions (3.12+)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ==================== HELPER FUNCTIONS ====================
 
